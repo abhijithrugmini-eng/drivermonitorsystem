@@ -127,7 +127,11 @@ python main.py --video videos/dataset.mp4 --no-display
 ```
 </details>
 
-You provide your own input video (none ships in this repo). Full flag reference, the local
+You provide your own input video (none ships in this repo). By default this also starts an
+in-process **Telematics Simulator** that generates plausible GPS/speed/RPM automatically — no
+separate process needed. To tag the run with a specific truck/driver identity (and optionally a
+GPS route the simulator follows), add `--vehicle-config fleet\example-vehicle-config.json` (a
+sample ships in `dms-edge/fleet/`). Full flag reference, the sample config's shape, the local
 telemetry-ingest endpoint, and troubleshooting: `dms-edge/README.md`.
 
 ## 3. Run the UI

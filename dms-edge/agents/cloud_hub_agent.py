@@ -20,6 +20,7 @@ from src.config import (
     EDGE_VEHICLE_REGISTRATION,
 )
 from src.events import DMSEvent, EventType
+from src.vehicle_config import VehicleConfig
 from agents.alarm_agent import Alarm
 from agents.telematics_agent import TelematicsAgent, VehicleState
 from storage import models
@@ -46,8 +47,24 @@ class CloudHubAgent:
 
     name = "cloud_hub_agent"
 
-    def __init__(self, telematics_agent: TelematicsAgent) -> None:
+    def __init__(self, telematics_agent: TelematicsAgent, vehicle_config: VehicleConfig | None = None) -> None:
         self._telematics_agent = telematics_agent
+        self._vehicle_config = vehicle_config
+
+    def _vehicle_registration(self) -> str:
+        return self._vehicle_config.vehicle_registration if self._vehicle_config else EDGE_VEHICLE_REGISTRATION
+
+    def _identity_context(self) -> dict:
+        """vehicle/driver identity fields sourced from --vehicle-config when given,
+        else None (matches today's behavior of not sending them at all)."""
+        vc = self._vehicle_config
+        return {
+            "vehicle_vin": vc.vin if vc else None,
+            "vehicle_fleet_id": vc.fleet_id if vc else None,
+            "driver_id": vc.driver_id if vc else None,
+            "driver_name": vc.driver_name if vc else None,
+            "vehicle_meta": (vc.extra or None) if vc else None,
+        }
 
     def _map_event(self, event: DMSEvent, vehicle_state: VehicleState) -> dict:
         return {
@@ -60,7 +77,8 @@ class CloudHubAgent:
                 "metrics": event.metrics,
             },
             "context": {
-                "vehicle_registration": EDGE_VEHICLE_REGISTRATION,
+                "vehicle_registration": self._vehicle_registration(),
+                **self._identity_context(),
                 "frame_index": event.frame_index,
                 "camera_id": CAMERA_ID,
                 "lat": vehicle_state.lat,
@@ -69,6 +87,7 @@ class CloudHubAgent:
             "vehicle": {
                 "speed_kmh": vehicle_state.speed_kmh,
                 "is_moving": vehicle_state.is_moving,
+                "rpm": vehicle_state.rpm,
             },
             "device": {
                 "device_id": DEVICE_ID,
@@ -110,13 +129,15 @@ class CloudHubAgent:
             "last_event_timestamp": violation.last_event_timestamp,
             "recommended_action_text": violation.recommended_action_text,
             "context": {
-                "vehicle_registration": EDGE_VEHICLE_REGISTRATION,
+                "vehicle_registration": self._vehicle_registration(),
+                **self._identity_context(),
                 "lat": vehicle_state.lat,
                 "lon": vehicle_state.lon,
             },
             "vehicle": {
                 "speed_kmh": vehicle_state.speed_kmh,
                 "is_moving": vehicle_state.is_moving,
+                "rpm": vehicle_state.rpm,
             },
             "alarm": {
                 "fired_at": alarm.fired_at,

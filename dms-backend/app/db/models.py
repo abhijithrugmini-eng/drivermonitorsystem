@@ -23,12 +23,15 @@ class Vehicle(Base):
 
     id = Column(Integer, primary_key=True)
     registration = Column(String, unique=True, nullable=False, index=True)
+    vin = Column(String, nullable=True)
+    fleet_id = Column(String, nullable=True)
     vehicle_type = Column(String, default="18-wheeler box truck")
     region = Column(String, nullable=True)
     route_default = Column(String, nullable=True)
     edge_device_id = Column(String, nullable=True)
     edge_device_status = Column(String, default="Online")
     firmware_version = Column(String, default="v2.3")
+    extra_metadata = Column(JSON, nullable=True)
     last_seen_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     events = relationship("Event", back_populates="vehicle")
@@ -39,8 +42,11 @@ class Driver(Base):
     __tablename__ = "drivers"
 
     id = Column(Integer, primary_key=True)
-    driver_code = Column(String, unique=True, nullable=False, index=True)
+    # Fleet-system driver ID (from --vehicle-config's required "driver_id" field) —
+    # replaces the old driver_code, which was never populated by any real code path.
+    driver_id = Column(String, unique=True, nullable=True, index=True)
     name = Column(String, nullable=True)
+    extra_metadata = Column(JSON, nullable=True)
 
     events = relationship("Event", back_populates="driver")
     violations = relationship("Violation", back_populates="driver")
@@ -66,6 +72,7 @@ class Event(Base):
     elapsed_trip_seconds = Column(Float, nullable=True)
 
     speed_kmh = Column(Float, nullable=True)
+    rpm = Column(Float, nullable=True)
     is_moving = Column(Boolean, default=True)
 
     lat = Column(Float, nullable=True)

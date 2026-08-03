@@ -25,9 +25,12 @@ import threading
 from src.config import (
     DISPLAY_WIDTH, DISPLAY_HEIGHT, OUTPUT_DIR,
     LOG_DIR, YOLO_FRAME_SKIP, UI_HOST, UI_PORT,
+    EDGE_VEHICLE_REGISTRATION, TELEMATICS_SOURCE,
 )
 from src.ui_server import sink, start_server
+from src.vehicle_config import load_vehicle_config
 from agents.telematics_agent import TelematicsAgent
+from agents.telematics_simulator import TelematicsSimulator
 from agents.behaviour_detection_agent import BehaviourDetectionAgent
 from agents.violation_detection_agent import ViolationDetectionAgent
 from agents.alarm_agent import AlarmAgent
@@ -52,6 +55,11 @@ def parse_args():
     p.add_argument("--no-ui", action="store_true", help="Disable SSE / Flask UI")
     p.add_argument("--no-display", action="store_true", help="Disable cv2.imshow")
     p.add_argument("--no-cloud", action="store_true", help="Disable Cloud Hub Agent push to dms-backend")
+    p.add_argument(
+        "--vehicle-config", type=str, default=None,
+        help="Path to a JSON file describing this run's truck/driver identity "
+             "(and optional GPS route) — see fleet/example-vehicle-config.json",
+    )
     return p.parse_args()
 
 
@@ -83,6 +91,8 @@ def main():
         print("ERROR: --camera is Phase 2 only. Demo runs on --video <path>.")
         sys.exit(1)
 
+    vehicle_config = load_vehicle_config(args.vehicle_config)  # fails fast (sys.exit(1)) before any video I/O
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     init_db()
 
@@ -92,10 +102,16 @@ def main():
     telematics_agent = TelematicsAgent()
     threading.Thread(target=telematics_agent.start_listener, daemon=True).start()
 
+    if TELEMATICS_SOURCE == "simulator":
+        truck_id = vehicle_config.vehicle_registration if vehicle_config else EDGE_VEHICLE_REGISTRATION
+        route = vehicle_config.route if vehicle_config else None
+        simulator = TelematicsSimulator(telematics_agent, truck_id, route=route)
+        threading.Thread(target=simulator.run_forever, daemon=True).start()
+
     behaviour_agent = BehaviourDetectionAgent()
     violation_agent = ViolationDetectionAgent()
     alarm_agent = AlarmAgent()
-    cloud_hub_agent = None if args.no_cloud else CloudHubAgent(telematics_agent)
+    cloud_hub_agent = None if args.no_cloud else CloudHubAgent(telematics_agent, vehicle_config)
 
     def dispatch(event):
         file_sink.emit(event)

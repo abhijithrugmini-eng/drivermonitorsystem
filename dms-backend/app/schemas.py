@@ -13,8 +13,12 @@ class DetectionIn(BaseModel):
 
 class ContextIn(BaseModel):
     vehicle_registration: str
-    driver_code: str | None = None
+    vehicle_vin: str | None = None
+    vehicle_fleet_id: str | None = None
+    driver_id: str | None = None  # fleet-system driver ID; replaces the old driver_code
     driver_name: str | None = None
+    vehicle_meta: dict[str, Any] | None = None  # opaque passthrough from --vehicle-config
+    driver_meta: dict[str, Any] | None = None  # reserved — unpopulated by dms-edge today
     trip_id: str | None = None
     route: str | None = None
     shift_label: str | None = None
@@ -30,6 +34,7 @@ class ContextIn(BaseModel):
 
 class VehicleIn(BaseModel):
     speed_kmh: float | None = None
+    rpm: float | None = None
     is_moving: bool = True
     vehicle_type: str | None = None
     region: str | None = None

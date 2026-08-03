@@ -261,6 +261,7 @@ Useful flags:
 | `--no-ui` | Don't start the local status web page (otherwise at `http://localhost:5050`) |
 | `--no-cloud` | Don't push anything to `dms-backend` — fully offline/local-only run |
 | `--save` | Save an annotated copy of the video to `dms-edge/output/` |
+| `--vehicle-config <path.json>` | Tag this run with a specific truck/driver identity (and optionally a GPS route) — see below |
 
 **Which backend it talks to**: environment variable `BACKEND_URL`, defaults to
 `http://localhost:8000`. Set it before launching if your backend lives elsewhere:
@@ -269,16 +270,69 @@ $env:BACKEND_URL = "http://192.168.1.50:8000"
 .\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display
 ```
 
-**Simulating GPS/telemetry**: `dms-edge` listens for telemetry on its own local
-port (`5060` by default) rather than generating it itself. Since `fleet-simulator`
-doesn't exist yet, you can feed it manually:
+**Simulating GPS/telemetry**: by default `dms-edge` generates its own plausible GPS/speed/RPM
+telemetry in-process (the **Telematics Simulator**) — you don't need to run or feed anything
+separately; it starts automatically alongside every other agent when you run `main.py`. Since
+`fleet-simulator` doesn't exist yet, this simulator is what stands in for it. Two modes, controlled
+by whether `--vehicle-config` supplies a `route`:
+
+- **No `--vehicle-config`, or a config with no `route` block** — the simulator loops a small canned
+  set of waypoints with an oscillating speed, so you'll see *some* motion with zero setup.
+- **`--vehicle-config` with a `route` block** — GPS position is derived from the reported speed (not
+  generated separately), so the truck visibly and consistently moves from a `from` coordinate toward
+  a `to` coordinate over a duration you choose. This is the "GPS and speed move together" behavior.
+
+**`--vehicle-config <path.json>`** tags the run with a specific truck/driver identity, so events and
+violations pushed to `dms-backend` show a real vehicle registration/VIN/fleet ID and driver name/ID
+instead of the generic `EDGE_VEHICLE_REGISTRATION` default with no driver attached. Required fields:
+`vehicle_registration`, `vin`, `fleet_id`, `driver_name`, `driver_id`. Any other top-level keys (e.g.
+`depot`, `notes`) are forwarded to `dms-backend` as opaque metadata — add whatever you want. A
+sample file ships at `dms-edge/fleet/example-vehicle-config.json`:
+
+```json
+{
+  "vehicle_registration": "MH-12-AB-4321",
+  "vin": "1HGCM82633A004352",
+  "fleet_id": "FLEET-WEST-07",
+  "driver_name": "Ramesh Kulkarni",
+  "driver_id": "DRV-10245",
+  "depot": "Pune Hub 3",
+  "insurance_expiry": "2027-01-15",
+  "notes": "Demo truck for AI COE showcase",
+  "route": {
+    "from_lat": 18.5204,
+    "from_lon": 73.8567,
+    "to_lat": 18.5384,
+    "to_lon": 73.8757,
+    "avg_speed_kmh": 60,
+    "duration_secs": 180
+  }
+}
+```
+
+The optional `route` block is what drives the GPS/speed tandem above — `from_lat`/`from_lon` and
+`to_lat`/`to_lon` are the start/end coordinates, `avg_speed_kmh` is the average speed to pace the
+trip at, and `duration_secs` is how long (in seconds) the simulated truck should take to complete
+it — match this to roughly how long your `--video` file runs so the truck "arrives" around when the
+demo ends. Once `duration_secs` elapses the truck holds at the destination coordinate and reports
+`speed_kmh: 0`. Omit `route` entirely to fall back to the canned-waypoint behavior. All 5 top-level
+fields are required if the file is supplied at all — a missing one makes `main.py` exit immediately
+with the field name, before it even opens the video, so mistakes are obvious rather than silent.
+
+```powershell
+.\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display `
+  --vehicle-config fleet\example-vehicle-config.json
+```
+
+**Manually feeding telemetry** is still possible (e.g. to test one specific GPS point, or if you set
+`TELEMATICS_SOURCE=http` to disable the built-in simulator and drive telemetry externally instead):
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://localhost:5060/telemetry `
   -ContentType "application/json" `
-  -Body '{"truckId":"EDGE-DEMO-001","latitude":34.05,"longitude":-118.25,"speed":72,"heading":180,"status":"MOVING"}'
+  -Body '{"truckId":"EDGE-DEMO-001","latitude":34.05,"longitude":-118.25,"speed":72,"heading":180,"status":"MOVING","rpm":1500}'
 ```
-`truckId` needs to match `EDGE_VEHICLE_REGISTRATION` (env var, defaults to
-`EDGE-DEMO-001`) for the reading to attach to the right vehicle.
+`truckId` needs to match `EDGE_VEHICLE_REGISTRATION` (or your `--vehicle-config`'s
+`vehicle_registration`) for the reading to attach to the right vehicle.
 
 **Where its files live:**
 - Code: `dms-edge/main.py` (entry point) + `dms-edge/agents/` (the 5 agents) +
@@ -496,9 +550,9 @@ are created automatically on startup if they don't already exist.
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `vehicles` | One row per truck | `registration` (unique), `vehicle_type`, `region`, `edge_device_id`, `edge_device_status`, `firmware_version` |
-| `drivers` | One row per driver | `driver_code` (unique), `name` |
-| `events` | Every raw detection received (audit trail) | `event_id` (unique), `timestamp`, `type`, `confidence`, `metrics_json`, `vehicle_id`, `driver_id`, `trip_id`, `speed_kmh`, `lat`/`lon` |
+| `vehicles` | One row per truck | `registration` (unique), `vin`, `fleet_id`, `vehicle_type`, `region`, `edge_device_id`, `edge_device_status`, `firmware_version`, `extra_metadata` |
+| `drivers` | One row per driver | `driver_id` (unique, fleet-system ID), `name`, `extra_metadata` |
+| `events` | Every raw detection received (audit trail) | `event_id` (unique), `timestamp`, `type`, `confidence`, `metrics_json`, `vehicle_id`, `driver_id`, `trip_id`, `speed_kmh`, `rpm`, `lat`/`lon` |
 | `evidence` | One row per event with a saved image/video | `event_id` (FK, unique), `image_path`, `video_path`, `sync_status` |
 | `violations` | Graded alerts shown on the dashboard | `violation_id` (unique), `violation_type`, `severity`, `status` (`ACTIVE`/`ACKNOWLEDGED`/`RESOLVED`), `event_count`, `trigger_event_ids_json`, `recommended_action_text` |
 | `alarms` | The driver-facing alert tied to a violation | `alarm_id` (unique), `violation_id` (FK, unique), `message`, `driver_ack_latency_seconds`, `speed_before_kmh`/`speed_after_kmh`, `status` (`PENDING_ACK`) |
@@ -543,10 +597,11 @@ plain constant or a locally-set environment variable.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `EDGE_VEHICLE_REGISTRATION` | `EDGE-DEMO-001` | Which vehicle this device represents |
+| `EDGE_VEHICLE_REGISTRATION` | `EDGE-DEMO-001` | Which vehicle this device represents (overridden by `--vehicle-config` when given) |
 | `BACKEND_URL` | `http://localhost:8000` | Where the Cloud Hub Agent sends events/violations/evidence |
 | `TELEMATICS_INGEST_PORT` | `5060` | Port the Telematics Agent listens on for `POST /telemetry` |
 | `DEVICE_ID` | `edge-001` | Identifies this physical/simulated device |
+| `TELEMATICS_SOURCE` | `simulator` | `"simulator"` runs the in-process Telematics Simulator; `"http"` expects a real Fleet Simulator POSTing to `/telemetry` |
 
 ### dms-ui — `dms-ui/.env`
 

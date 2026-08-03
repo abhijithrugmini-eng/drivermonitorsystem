@@ -122,6 +122,15 @@ DEVICE_ID = os.environ.get("DEVICE_ID", "edge-001")
 DEVICE_MODEL = "renesas_rcar"
 CAMERA_ID = "cam-0"
 
+# Telematics Simulator — drives TelematicsAgent.run() directly on a timer when no
+# real Fleet Simulator is available. "simulator" (default) starts the in-process
+# simulator thread; "http" leaves telemetry ingestion purely to the Flask listener
+# above (a real Fleet Simulator POSTing to it). See agents/telematics_simulator.py.
+TELEMATICS_SOURCE = os.environ.get("TELEMATICS_SOURCE", "simulator")  # "simulator" | "http"
+TELEMATICS_SIM_INTERVAL_SECS = float(os.environ.get("TELEMATICS_SIM_INTERVAL_SECS", "1.5"))
+TELEMATICS_SIM_RPM_IDLE = (600, 900)      # idle band, rpm
+TELEMATICS_SIM_RPM_CRUISE = (1200, 1900)  # cruise band, rpm — diesel truck plausible range
+
 # ──────────────────────────────────────────────
 # Violation Detection Agent — local rule thresholds
 # Ported from dms-backend/app/config.py; keep these in sync — see

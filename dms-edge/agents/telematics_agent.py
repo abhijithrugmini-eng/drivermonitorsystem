@@ -26,6 +26,7 @@ class TelemetryUpdate:
     speed: float = 0.0
     heading: float = 0.0
     status: str = "STOPPED"  # "MOVING" | "STOPPED" | "IDLE"
+    rpm: float = 0.0
     timestamp: str | None = None
 
     @classmethod
@@ -37,6 +38,7 @@ class TelemetryUpdate:
             speed=float(payload.get("speed", 0.0)),
             heading=float(payload.get("heading", 0.0)),
             status=str(payload.get("status", "STOPPED")),
+            rpm=float(payload.get("rpm", 0.0)),
             timestamp=payload.get("timestamp"),
         )
 
@@ -50,6 +52,7 @@ class VehicleState:
     speed_kmh: float | None = None
     heading: float | None = None
     is_moving: bool = False
+    rpm: float | None = None
     last_updated: float | None = None
 
 
@@ -71,6 +74,7 @@ class TelematicsAgent:
             speed_kmh=input_.speed,
             heading=input_.heading,
             is_moving=input_.status == "MOVING",
+            rpm=input_.rpm,
             last_updated=time.time(),
         )
         with self._lock:

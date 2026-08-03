@@ -92,7 +92,7 @@ def serialize_alert_detail(db: Session, violation: models.Violation) -> dict:
         **serialize_alert_summary(db, violation),
         "trip_details": {
             "driver_name": driver.name if driver and driver.name else "Unknown driver",
-            "driver_id": driver.driver_code if driver else None,
+            "driver_id": driver.driver_id if driver else None,
             "route": (event.route if event else None) or (vehicle.route_default if vehicle else None),
             "shift_label": event.shift_label if event else None,
             "speed_at_event_kmh": event.speed_kmh if event else None,

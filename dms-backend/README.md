@@ -62,7 +62,8 @@ the end.
 ## Data contract deviation from `specs/VIOLATION_AND_EVIDENCE_MODELS.md`
 
 That spec's Event model has no vehicle/driver identity field. This backend extends `context` with
-`vehicle_registration` (required) and optional `driver_code`/`driver_name` — vehicles and drivers are
+`vehicle_registration` (required) and optional `driver_id`/`driver_name` (plus `vehicle_vin`,
+`vehicle_fleet_id`, `vehicle_meta`) — vehicles and drivers are
 looked up or created on first sighting (get-or-create). Evidence is stored as files under
 `storage/evidence/{images,videos}/`, not inline base64 JPG — the spec's older inline-base64 approach
 is superseded by `.claude/skills/dms-backend-dev/SKILL.md`.

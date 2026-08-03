@@ -1,4 +1,10 @@
-"""Inject API — what dms-edge (or scripts/seed_demo.py, standing in for it) pushes events/evidence to."""
+"""Inject API — what dms-edge (or scripts/seed_demo.py, standing in for it) pushes events/evidence to.
+
+NOTE: Vehicle/Driver gained new nullable columns (vin, fleet_id, driver_id,
+extra_metadata) and Driver.driver_code was removed. Base.metadata.create_all()
+does not ALTER existing tables, so a pre-existing local dms.db must be deleted
+and let init_db() recreate it — see dms-spec/changes/
+add-telematics-simulator-and-vehicle-config/design.md "Risks"."""
 
 import uuid
 
@@ -38,23 +44,40 @@ def _get_or_create_vehicle(
     if vehicle is None:
         vehicle = models.Vehicle(
             registration=ctx.vehicle_registration,
+            vin=ctx.vehicle_vin,
+            fleet_id=ctx.vehicle_fleet_id,
             vehicle_type=vehicle_in.vehicle_type or "18-wheeler box truck",
             region=vehicle_in.region,
             route_default=ctx.route,
+            extra_metadata=ctx.vehicle_meta,
         )
         db.add(vehicle)
         db.flush()
+    else:
+        # keep vin/fleet_id/extra_metadata fresh if a later event carries them
+        # (e.g. first event arrived before --vehicle-config was wired up)
+        if ctx.vehicle_vin:
+            vehicle.vin = ctx.vehicle_vin
+        if ctx.vehicle_fleet_id:
+            vehicle.fleet_id = ctx.vehicle_fleet_id
+        if ctx.vehicle_meta:
+            vehicle.extra_metadata = ctx.vehicle_meta
     return vehicle
 
 
 def _get_or_create_driver(db: Session, ctx: schemas.ContextIn) -> models.Driver | None:
-    if not ctx.driver_code:
+    if not ctx.driver_id:
         return None
-    driver = db.query(models.Driver).filter(models.Driver.driver_code == ctx.driver_code).first()
+    driver = db.query(models.Driver).filter(models.Driver.driver_id == ctx.driver_id).first()
     if driver is None:
-        driver = models.Driver(driver_code=ctx.driver_code, name=ctx.driver_name)
+        driver = models.Driver(driver_id=ctx.driver_id, name=ctx.driver_name, extra_metadata=ctx.driver_meta)
         db.add(driver)
         db.flush()
+    else:
+        if ctx.driver_name:
+            driver.name = ctx.driver_name
+        if ctx.driver_meta:
+            driver.extra_metadata = ctx.driver_meta
     return driver
 
 
@@ -89,6 +112,7 @@ async def receive_event(payload: schemas.EventIn, db: Session = Depends(get_db))
         trip_started_at=payload.context.trip_started_at,
         elapsed_trip_seconds=payload.context.elapsed_trip_seconds,
         speed_kmh=payload.vehicle.speed_kmh,
+        rpm=payload.vehicle.rpm,
         is_moving=payload.vehicle.is_moving,
         lat=payload.context.lat,
         lon=payload.context.lon,

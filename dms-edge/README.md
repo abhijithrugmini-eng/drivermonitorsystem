@@ -103,10 +103,57 @@ Flags:
 - `--no-ui` disables the local Flask/SSE stub UI (`http://localhost:5050`).
 - `--no-cloud` disables the Cloud Hub Agent's push to `dms-backend` (local-only run).
 - `--camera <index>` is Phase 2 / not used in this demo — video-file input only for now.
+- `--vehicle-config <path.json>` supplies this run's truck/driver identity (required fields:
+  `vehicle_registration`, `vin`, `fleet_id`, `driver_name`, `driver_id`; any other JSON keys are
+  forwarded to `dms-backend` as opaque metadata) — see `fleet/example-vehicle-config.json`. Missing
+  a required field exits before any video is opened. When omitted, identity falls back to the
+  `EDGE_VEHICLE_REGISTRATION` env var and no driver is attached. Optionally include a `"route"`
+  block (`from_lat`/`from_lon`/`to_lat`/`to_lon`/`avg_speed_kmh`/`duration_secs`) to drive the
+  Telematics Simulator's GPS-position-from-speed tandem instead of its canned-waypoint fallback.
 
 Run `dms-backend` first (see `dms-backend/README.md`) if you want events/evidence to actually land
 on the "Fleet Command" dashboard; otherwise the Cloud Hub Agent logs a failed push per event and
 keeps going (log-and-drop, no retry queue).
+
+### `--vehicle-config` example
+
+```powershell
+.\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display `
+  --vehicle-config fleet\example-vehicle-config.json
+```
+
+`fleet/example-vehicle-config.json` ships in this folder:
+
+```json
+{
+  "vehicle_registration": "MH-12-AB-4321",
+  "vin": "1HGCM82633A004352",
+  "fleet_id": "FLEET-WEST-07",
+  "driver_name": "Ramesh Kulkarni",
+  "driver_id": "DRV-10245",
+  "depot": "Pune Hub 3",
+  "insurance_expiry": "2027-01-15",
+  "notes": "Demo truck for AI COE showcase",
+  "route": {
+    "from_lat": 18.5204,
+    "from_lon": 73.8567,
+    "to_lat": 18.5384,
+    "to_lon": 73.8757,
+    "avg_speed_kmh": 60,
+    "duration_secs": 180
+  }
+}
+```
+
+The 5 top-level fields (`vehicle_registration`, `vin`, `fleet_id`, `driver_name`, `driver_id`) are
+required whenever `--vehicle-config` is given; any other top-level key is passed through to
+`dms-backend` untouched as opaque metadata (`context.vehicle_meta`) — add whatever fields you need.
+The optional `route` block drives the GPS/speed tandem: `from_lat`/`from_lon` → `to_lat`/`to_lon` is
+the path, `avg_speed_kmh` paces it, and `duration_secs` is how long the trip should take — set it to
+roughly your `--video` file's length so the simulated truck arrives around when the demo ends. Once
+`duration_secs` elapses the truck holds at the destination and reports `speed_kmh: 0`. Omit `route`
+to fall back to the canned-waypoint model. Copy this file and edit it per truck/demo — a required
+field missing from your copy makes `main.py` print which one and exit before opening the video.
 
 ## Telematics ingest (manual, until fleet-simulator exists)
 
@@ -137,10 +184,12 @@ All in `src/config.py`, tunable via environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `EDGE_VEHICLE_REGISTRATION` | `EDGE-DEMO-001` | vehicle identity attached to every pushed event |
+| `EDGE_VEHICLE_REGISTRATION` | `EDGE-DEMO-001` | vehicle identity attached to every pushed event (overridden by `--vehicle-config` when given) |
 | `BACKEND_URL` | `http://localhost:8000` | `dms-backend` base URL |
 | `TELEMATICS_INGEST_PORT` | `5060` | Telematics Agent's `POST /telemetry` port |
 | `DEVICE_ID` | `edge-001` | device identity forwarded to `dms-backend` |
+| `TELEMATICS_SOURCE` | `simulator` | `"simulator"` starts the in-process Telematics Simulator thread; `"http"` leaves telemetry purely to `POST /telemetry` |
+| `TELEMATICS_SIM_INTERVAL_SECS` | `1.5` | Telematics Simulator tick interval |
 
 Detection thresholds (EAR/MAR/head-pose/YOLO confidence/cooldowns) are unchanged from the vendored
 reference app — see `src/config.py`'s upper section.

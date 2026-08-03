@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/dms-spec/scripts/generate_release.py\" 2>/dev/null || true",
+            "timeout": 15,
+            "statusMessage": "Checking dms-spec changes for release..."
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3 dms-spec/scripts/generate_release.py add-dms-edge)"
+    ]
+  }
+}

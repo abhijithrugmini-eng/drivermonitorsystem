@@ -1,0 +1,24 @@
+# Optional container path for the POC — see README.md "Option: Run with Docker".
+# Default/primary workflow is still the local venv (dms-backend) + npm run dev (dms-ui).
+services:
+  backend:
+    build: ./dms-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - dms_backend_storage:/app/storage
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./dms-ui
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  dms_backend_storage:

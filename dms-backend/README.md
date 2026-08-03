@@ -7,6 +7,15 @@ Command" dashboard (`dms-ui`) over REST + WebSocket.
 
 ## Run
 
+**Windows (PowerShell):**
+```powershell
+cd dms-backend
+py -3.11 -m venv .venv
+.\.venv\Scripts\pip.exe install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Linux / macOS:**
 ```bash
 cd dms-backend
 python3 -m venv .venv
@@ -15,20 +24,30 @@ pip install -r requirements.txt
 ./scripts/start_backend.sh          # uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-> **If `pip`/`venv` fails with a `pyexpat`/`libexpat` symbol error** (seen on this machine's Homebrew
-> Python 3.13/3.14 — the system `libexpat.1.dylib` is older than what Homebrew's Python expects, which
-> breaks `ensurepip` for every Homebrew Python), use [`uv`](https://github.com/astral-sh/uv) instead —
-> it downloads its own standalone Python, sidestepping the broken system library:
+> **If `pip`/`venv` fails with a `pyexpat`/`libexpat` symbol error** (seen with Homebrew Python
+> 3.13/3.14 on macOS — the system `libexpat.1.dylib` is older than what Homebrew's Python expects,
+> which breaks `ensurepip` for every Homebrew Python), use [`uv`](https://github.com/astral-sh/uv)
+> instead — it downloads its own standalone Python, sidestepping the broken system library:
 > ```bash
 > uv venv .venv --python 3.13
 > uv pip install -r requirements.txt --python .venv/bin/python3.13
 > .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 > ```
+> This is a macOS/Linux-only workaround — not needed (or applicable) on Windows.
+
+See the root `README.md`'s Troubleshooting section for Windows execution-policy and port-conflict
+notes.
 
 Swagger UI: http://localhost:8000/docs
 
 ## Demo data (no real edge device required)
 
+**Windows (PowerShell):**
+```powershell
+.\.venv\Scripts\python.exe scripts\seed_demo.py
+```
+
+**Linux / macOS:**
 ```bash
 source .venv/bin/activate
 python scripts/seed_demo.py

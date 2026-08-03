@@ -3,7 +3,7 @@
 ## Approach
 
 Follow `.claude/skills/dms-edge-dev/SKILL.md` and `.claude/skills/dms-agentic-architecture/SKILL.md`
-directly. Vendor `specs/DriverMonitorPOC-main` into `dms-edge/src/` **unmodified** (it's frozen
+directly. Vendor `https://github.com/raviR-lab/DriverMonitorPOC/tree/main` into `dms-edge/src/` **unmodified** (it's frozen
 reference CV code — MediaPipe Face Mesh + YOLOv8n phone detection, time-based event windows), and add
 exactly three new agents on top, each implementing the shared `BaseAgent[TIn, TOut]` Protocol
 (`name: str`, `run(input_) -> output`, no hidden global state, no shared library — duplicated
@@ -49,12 +49,12 @@ graph LR
 ## Files touched
 
 New:
-- `dms-edge/main.py` — adapted from `specs/DriverMonitorPOC-main/main.py` (instantiate + wire the
+- `dms-edge/main.py` — adapted from `https://github.com/raviR-lab/DriverMonitorPOC/tree/main/main.py` (instantiate + wire the
   three agents into the existing sink fan-out; argument parsing otherwise unchanged)
 - `dms-edge/src/{__init__.py,config.py,events.py,alert_templates.py,dms.py,ui_server.py}` — vendored
-  from `specs/DriverMonitorPOC-main/src/`; only `config.py` gets new values appended (see below),
+  from `https://github.com/raviR-lab/DriverMonitorPOC/tree/main/src/`; only `config.py` gets new values appended (see below),
   the rest byte-for-byte
-- `dms-edge/models/` — vendored from `specs/DriverMonitorPOC-main/models/`
+- `dms-edge/models/` — vendored from `https://github.com/raviR-lab/DriverMonitorPOC/tree/main/models/`
 - `dms-edge/scripts/{run_demo.sh,bench_yolo.py,extract_frames.py,report.py}` — vendored, unchanged
 - `dms-edge/DEPLOY.md` — vendored, unchanged
 - `dms-edge/agents/{__init__.py,base.py,telematics_agent.py,behaviour_detection_agent.py,cloud_hub_agent.py}` — new

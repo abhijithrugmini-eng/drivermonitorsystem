@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# demo/videos
+demo/videos/*.*
+demo/videos/.DS_Store
+demo/videos/
+
 # Distribution / packaging
 .Python
 build/
@@ -238,3 +243,11 @@ dms-edge/storage/local.db
 
 # macOS
 .DS_Store
+
+# demo scripts (DriverMonitorPOC one-click demo)
+demo/.demo_pids
+demo/.demo_pids.json
+demo/backend.log
+demo/backend.err.log
+demo/ui.log
+demo/ui.err.log

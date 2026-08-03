@@ -64,12 +64,12 @@ def make_event(
             "region": "South",
         },
         "device": {
-            "device_id": f"edge_{vehicle_registration}",
+            "device_id": None,
             "device_model": "renesas_rcar",
             "os": "linux",
             "processing_time_ms": 45,
-            "edge_device_status": "Online",
-            "firmware_version": "v2.3",
+            "edge_device_status": None,
+            "firmware_version": None,
         },
     }
 

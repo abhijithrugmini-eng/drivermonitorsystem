@@ -19,13 +19,13 @@ description: >-
 
 # DMS Edge — Driver Monitor System (Edge/Device Side)
 
-Builds the edge-side of the DriverMonitorPOC: the code that runs on the in-vehicle device (board simulating the Renesas R-Car unit, per `specs/DriverMonitorPOC-main/DEPLOY.md`) inside the "Driver Monitor System" box of `specs/POC_ARCHITECTURE_WORKBENCH.drawio` / `specs/POC_ARCHITECTURE.drawio`.
+Builds the edge-side of the DriverMonitorPOC: the code that runs on the in-vehicle device (board simulating the Renesas R-Car unit, per `https://github.com/raviR-lab/DriverMonitorPOC/blob/main/DEPLOY.md`) inside the "Driver Monitor System" box of `specs/POC_ARCHITECTURE_WORKBENCH.drawio` / `specs/POC_ARCHITECTURE.drawio`.
 
 **This component is this POC's core selling point.** The differentiator being demoed is *local AI analytics and an agentic framework running on the vehicle* — not a camera that streams raw events for a smarter cloud to grade. That's why violation detection (not just behaviour detection) lives here: see "Violation Detection Agent" below and `dms-spec/changes/move-violation-detection-to-edge/` for the full rationale.
 
 **Read `.claude/skills/dms-agentic-architecture/SKILL.md` first.** This component is built as five agents (Telematics Agent, Behaviour Detection Agent, Violation Detection Agent, Alarm Agent, Cloud Hub Agent) conforming to that doc's shared `BaseAgent` contract — the architecture, naming, and boundaries here follow that doctrine and the drawio diagrams directly, not an ad hoc structure invented per-skill.
 
-Unlike `dms-backend`/`dms-ui`, the CV detection logic is **not built from scratch** — a complete, working detection app already exists at `specs/DriverMonitorPOC-main/`. This skill's job is agentification and integration (wrap it, add local rule evaluation on top, wire it to `dms-backend` and the Fleet Simulator), not reimplementing the CV pipeline.
+Unlike `dms-backend`/`dms-ui`, the CV detection logic is **not built from scratch** — a complete, working detection app already exists at `https://github.com/raviR-lab/DriverMonitorPOC/blob/main/`. This skill's job is agentification and integration (wrap it, add local rule evaluation on top, wire it to `dms-backend` and the Fleet Simulator), not reimplementing the CV pipeline.
 
 ## Context to read first
 
@@ -34,7 +34,7 @@ Before writing code, skim these files in the repo (paths relative to repo root):
 - `dms-spec/changes/move-violation-detection-to-edge/design.md` and `explore.md` — the architecture decision that moved violation detection here, the alternatives considered for the Behaviour Detection ↔ Violation Detection integration mechanism, and the exact `POST /api/violations` contract sketch
 - `dms-spec/specs/violation-detection/spec.md` — the precise rule logic to port (drowsiness/phone/distraction/continuous-drive thresholds, the "growing violations" behavior, simulated in-cabin response) — currently documents `dms-backend`'s implementation; port its behavior faithfully, don't redesign the rules
 - `specs/POC_ARCHITECTURE_WORKBENCH.drawio` (page 2) / `specs/POC_ARCHITECTURE.drawio` / `specs/Updated_POC_ARCHITECTURE.png` — the box diagrams this skill implements: **Telematics Unit → Telematics Agent**, **Camera → Behaviour Detection Agent**, both → Local Storage / Videos/Images, → **Violation Detection** → **Alarms** + **Cloud Hub** → Inject API / SFTP
-- `specs/DriverMonitorPOC-main/` — the reference implementation this skill vendors in. See the breakdown below before touching anything.
+- `https://github.com/raviR-lab/DriverMonitorPOC/tree/main/specs/DriverMonitorPOC-main` — the reference implementation this skill vendors in. See the breakdown below before touching anything.
 - `dms-backend/app/rule_agents/violation_rules.py`, `notification_rules.py`, `app/schemas.py`, `app/api/inject_api.py` — the **actual, running** rule logic and Inject API contract. More authoritative than `specs/VIOLATION_AND_EVIDENCE_MODELS.md`, which `dms-backend` already deviates from in places.
 - `.claude/skills/fleet-simulator-dev/SKILL.md` and `specs/FLEET_SIMULATOR_SPEC.md` — the Telematics Agent's data source. The simulator publishes GPS/telemetry updates *to* this component's Telematics Agent (see "Telematics Agent" below) — it is not a rebuild target here.
 
@@ -139,7 +139,7 @@ Fleet Simulator (standalone, not yet built) ──HTTP──▶┐
 Telematics Simulator (in-process, dms-edge-local,     ├─▶ Telematics Agent ──┐
   default until Fleet Simulator exists) ─────────────▶┘   (agents/telematics_agent.py)      │ latest vehicle state
                                                                                                │ (read, not pushed)
-specs/DriverMonitorPOC-main, vendored, unmodified                            │
+https://github.com/raviR-lab/DriverMonitorPOC/main, vendored, unmodified                            │
 ┌──────────────────────────────────────────────────────────────────┐        │
 │ main.py ─▶ Behaviour Detection Agent ─▶ DriverMonitoringSystem      │        │
 │            (agents/behaviour_detection_agent.py)   (src/dms.py)     │        │
@@ -170,7 +170,7 @@ specs/DriverMonitorPOC-main, vendored, unmodified                            │
 
 ## Folder structure to create
 
-Scaffold this inside the repo root (sibling to `specs/`) by **vendoring `specs/DriverMonitorPOC-main/` in as the `src/` tree**, then adding the agentic layer on top:
+Scaffold this inside the repo root (sibling to `specs/`) by **vendoring `https://github.com/raviR-lab/DriverMonitorPOC/tree/main` in as the `src/` tree**, then adding the agentic layer on top:
 
 ```
 dms-edge/
@@ -213,9 +213,9 @@ dms-edge/
 Run once when scaffolding (copy the reference app, don't recreate it):
 ```bash
 mkdir -p dms-edge
-cp -r specs/DriverMonitorPOC-main/main.py specs/DriverMonitorPOC-main/src specs/DriverMonitorPOC-main/models \
-      specs/DriverMonitorPOC-main/scripts specs/DriverMonitorPOC-main/requirements.txt \
-      specs/DriverMonitorPOC-main/DEPLOY.md dms-edge/
+cp -r https://github.com/raviR-lab/DriverMonitorPOC/tree/main/main.py https://github.com/raviR-lab/DriverMonitorPOC/tree/main/src https://github.com/raviR-lab/DriverMonitorPOC/tree/main/models \
+      https://github.com/raviR-lab/DriverMonitorPOC/tree/main/scripts https://github.com/raviR-lab/DriverMonitorPOC/tree/main/requirements.txt \
+      https://github.com/raviR-lab/DriverMonitorPOC/tree/main/DEPLOY.md dms-edge/
 mkdir -p dms-edge/agents dms-edge/storage dms-edge/videos dms-edge/tests
 touch dms-edge/agents/__init__.py dms-edge/storage/__init__.py
 ```
@@ -233,7 +233,7 @@ dms-edge/storage/local.db
 
 ## Tech stack
 
-Same as `specs/DriverMonitorPOC-main/requirements.txt` — `opencv-python`, `numpy`, `mediapipe==0.10.14` (pinned — the legacy `solutions.face_mesh` API was removed in 0.10.20+), `ultralytics`, `flask` (already a dependency — reuse it for the Telematics Agent's tiny listener instead of adding a second web framework) — plus `requests` for the Cloud Hub Agent and `sqlalchemy` for the new local store (same ORM `dms-backend` already uses — one pattern to know, not two).
+Same as `https://github.com/raviR-lab/DriverMonitorPOC/tree/main/requirements.txt` — `opencv-python`, `numpy`, `mediapipe==0.10.14` (pinned — the legacy `solutions.face_mesh` API was removed in 0.10.20+), `ultralytics`, `flask` (already a dependency — reuse it for the Telematics Agent's tiny listener instead of adding a second web framework) — plus `requests` for the Cloud Hub Agent and `sqlalchemy` for the new local store (same ORM `dms-backend` already uses — one pattern to know, not two).
 
 ## Data flow contract (Cloud Hub Agent)
 
@@ -263,7 +263,7 @@ Push flow:
 
 ## When building
 
-- Reuse `specs/DriverMonitorPOC-main` file-for-file inside `src/`; the new code is `dms-edge/agents/` (now five agents) and `dms-edge/storage/`.
+- Reuse `https://github.com/raviR-lab/DriverMonitorPOC/tree/main` file-for-file inside `src/`; the new code is `dms-edge/agents/` (now five agents) and `dms-edge/storage/`.
 - Port the Violation Detection Agent's rules from `dms-backend/app/rule_agents/violation_rules.py` and `dms-spec/specs/violation-detection/spec.md` faithfully — same thresholds, same growing-violations behavior. This is a port, not a chance to redesign the rules.
 - Build and verify the Telematics Agent's ingestion endpoint against a *manual* `curl -X POST` before wiring the real Fleet Simulator to it.
 - Start with `--video path/to/dataset.mp4`, not a live camera — `main.py` already gates `--camera` as Phase 2.

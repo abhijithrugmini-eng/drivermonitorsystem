@@ -1,4 +1,17 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(python3 dms-spec/scripts/generate_release.py add-dms-edge)",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(rm -f storage/dms.db)",
+      "Bash(.venv/Scripts/python.exe -c \"import app.main; print\\('OK'\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/violations -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s http://localhost:8000/api/alerts/viol_test_tripdetails)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:8000/api/events -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(python dms-spec/scripts/generate_release.py display-trip-details-in-ui)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
@@ -11,11 +24,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(python3 dms-spec/scripts/generate_release.py add-dms-edge)"
     ]
   }
 }

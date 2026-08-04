@@ -35,10 +35,10 @@ only real difference is venv activation syntax and which Python launcher you use
 <summary><b>Windows (PowerShell)</b></summary>
 
 ```powershell
-cd dms-backend
-py -3.11 -m venv .venv
-.\.venv\Scripts\pip.exe install -r requirements.txt
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   cd dms-backend
+   py -3.11 -m venv .venv
+   .\.venv\Scripts\pip.exe install -r requirements.txt
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 No `uv` needed on Windows — plain `venv`/`pip` works fine here. If `py -3.11` isn't found, install
@@ -111,7 +111,7 @@ local/on-vehicle detection path described in `CLAUDE.md`.
 cd dms-edge
 py -3.11 -m venv .venv
 .\.venv\Scripts\pip.exe install -r requirements.txt
-.\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display
+.\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display --vehicle-config fleet\example-vehicle-config.json
 ```
 </details>
 
@@ -123,7 +123,7 @@ cd dms-edge
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python main.py --video videos/dataset.mp4 --no-display
+python main.py --video videos/dataset.mp4 --no-display --vehicle-config fleet/example-vehicle-config.json
 ```
 </details>
 
@@ -131,7 +131,10 @@ You provide your own input video (none ships in this repo). By default this also
 in-process **Telematics Simulator** that generates plausible GPS/speed/RPM automatically — no
 separate process needed. To tag the run with a specific truck/driver identity (and optionally a
 GPS route the simulator follows), add `--vehicle-config fleet\example-vehicle-config.json` (a
-sample ships in `dms-edge/fleet/`). Full flag reference, the sample config's shape, the local
+sample ships in `dms-edge/fleet/`). This also drives the dashboard's **Trip Details** card
+(driver, route, shift, speed at event, trip started) — see `demo/DEMO_GUIDE.md`'s
+"Trip Details (driver, route, shift, speed, trip started)" section for exactly which config
+fields feed which card fields. Full flag reference, the sample config's shape, the local
 telemetry-ingest endpoint, and troubleshooting: `dms-edge/README.md`.
 
 ## 3. Run the UI
@@ -139,9 +142,9 @@ telemetry-ingest endpoint, and troubleshooting: `dms-edge/README.md`.
 In a second terminal (same commands on all three OSes):
 
 ```bash
-cd dms-ui
-npm install
-npm run dev
+   cd dms-ui
+   npm install
+   npm run dev
 ```
 
 - Dashboard: http://localhost:5173
@@ -183,6 +186,8 @@ replacement for it — use whichever fits your environment. See `dms-backend/Doc
    simulate the same pipeline without a video/camera. Watch the dashboard update live over
    WebSocket: summary cards, Live Alerts list, and the Alert Detail panel (Trip Details / Evidence /
    Location / Vehicle / In-Cabin Response / Recommended Action) all populate without a page refresh.
+   Trip Details (driver, route, shift, speed at event, trip started) only shows real values instead
+   of "—"/"Unknown driver" if `dms-edge` was launched with `--vehicle-config` — see step 2 above.
 4. Click an alert row, then try **Acknowledge** / **Send advisory** — both mutate state on the
    backend and broadcast the update back to the dashboard live.
 

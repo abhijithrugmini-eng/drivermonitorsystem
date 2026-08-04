@@ -36,7 +36,9 @@ class VehicleConfig:
     driver_name: str
     driver_id: str
     route: RouteConfig | None = None
-    extra: dict = field(default_factory=dict)  # any JSON keys beyond the required 5 and "route"
+    route_name: str | None = None  # optional display string, e.g. "Mumbai-Pune Corridor" — distinct from route's GPS coords
+    shift_label: str | None = None  # optional display string, e.g. "Day Shift (06:00-14:00)"
+    extra: dict = field(default_factory=dict)  # any JSON keys beyond the required 5, "route", "route_name", "shift_label"
 
     @classmethod
     def from_file(cls, path: str) -> "VehicleConfig":
@@ -67,7 +69,11 @@ class VehicleConfig:
                 duration_secs=float(route_data["duration_secs"]),
             )
 
-        extra = {k: v for k, v in data.items() if k not in REQUIRED_FIELDS and k != "route"}
+        extra = {
+            k: v
+            for k, v in data.items()
+            if k not in REQUIRED_FIELDS and k not in ("route", "route_name", "shift_label")
+        }
         return cls(
             vehicle_registration=str(data["vehicle_registration"]),
             vin=str(data["vin"]),
@@ -75,6 +81,8 @@ class VehicleConfig:
             driver_name=str(data["driver_name"]),
             driver_id=str(data["driver_id"]),
             route=route,
+            route_name=data.get("route_name"),
+            shift_label=data.get("shift_label"),
             extra=extra,
         )
 

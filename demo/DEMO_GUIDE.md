@@ -284,10 +284,12 @@ by whether `--vehicle-config` supplies a `route`:
 
 **`--vehicle-config <path.json>`** tags the run with a specific truck/driver identity, so events and
 violations pushed to `dms-backend` show a real vehicle registration/VIN/fleet ID and driver name/ID
-instead of the generic `EDGE_VEHICLE_REGISTRATION` default with no driver attached. Required fields:
-`vehicle_registration`, `vin`, `fleet_id`, `driver_name`, `driver_id`. Any other top-level keys (e.g.
-`depot`, `notes`) are forwarded to `dms-backend` as opaque metadata — add whatever you want. A
-sample file ships at `dms-edge/fleet/example-vehicle-config.json`:
+instead of the generic `EDGE_VEHICLE_REGISTRATION` default with no driver attached. It also feeds the
+dashboard's **Trip Details** card (driver, route, shift, speed at event, trip started) — see
+[below](#trip-details-driver-route-shift). Required fields: `vehicle_registration`, `vin`, `fleet_id`,
+`driver_name`, `driver_id`. Any other top-level keys (e.g. `depot`, `notes`) are forwarded to
+`dms-backend` as opaque metadata — add whatever you want. A sample file ships at
+`dms-edge/fleet/example-vehicle-config.json`:
 
 ```json
 {
@@ -296,6 +298,8 @@ sample file ships at `dms-edge/fleet/example-vehicle-config.json`:
   "fleet_id": "FLEET-WEST-07",
   "driver_name": "Ramesh Kulkarni",
   "driver_id": "DRV-10245",
+  "route_name": "Mumbai-Pune Corridor",
+  "shift_label": "Day Shift (06:00-14:00)",
   "depot": "Pune Hub 3",
   "insurance_expiry": "2027-01-15",
   "notes": "Demo truck for AI COE showcase",
@@ -315,9 +319,29 @@ The optional `route` block is what drives the GPS/speed tandem above — `from_l
 trip at, and `duration_secs` is how long (in seconds) the simulated truck should take to complete
 it — match this to roughly how long your `--video` file runs so the truck "arrives" around when the
 demo ends. Once `duration_secs` elapses the truck holds at the destination coordinate and reports
-`speed_kmh: 0`. Omit `route` entirely to fall back to the canned-waypoint behavior. All 5 top-level
-fields are required if the file is supplied at all — a missing one makes `main.py` exit immediately
-with the field name, before it even opens the video, so mistakes are obvious rather than silent.
+`speed_kmh: 0`. Omit `route` entirely to fall back to the canned-waypoint behavior. All 5 required
+top-level fields must be present if the file is supplied at all — a missing one makes `main.py` exit
+immediately with the field name, before it even opens the video, so mistakes are obvious rather than
+silent. `route_name`, `shift_label`, and `route` are all optional and independent of each other —
+`route_name` is just a display string for the Trip Details card, unrelated to the `route` block's GPS
+coordinates.
+
+#### Trip Details (driver, route, shift, speed, trip started)
+
+The dashboard's alert detail panel has a **Trip Details** card (driver, route, shift, speed at
+event, trip started/elapsed). It's populated end-to-end from `--vehicle-config`:
+
+- `driver_name`/`driver_id` → straight from the config, as described above.
+- `route`/`shift_label` → from the config's optional `route_name`/`shift_label` fields (shown as-is,
+  no derivation). Omit them and the card shows "—" for just those two fields — nothing else breaks.
+- `trip_id`/`trip_started_at`/`elapsed_trip_seconds` → generated once when `dms-edge`'s Cloud Hub
+  Agent starts (one trip per process run — there's no ignition-cycle/trip-boundary detection in this
+  POC, so restarting `main.py` starts a new trip).
+- `speed_at_event_kmh` → the vehicle speed (from the Telematics Simulator/Agent) at the moment the
+  event that anchors the violation's evidence was recorded.
+
+Without `--vehicle-config` at all, every one of these fields shows "—"/"Unknown driver" — same as
+before this was wired up — since there's no driver/route/shift identity to attach.
 
 ```powershell
 .\.venv\Scripts\python.exe main.py --video videos\dataset.mp4 --no-display `
@@ -491,7 +515,17 @@ links it to the event so the dashboard's evidence panel can show it.
   "first_event_timestamp": 1234567890.0,
   "last_event_timestamp": 1234568010.0,
   "recommended_action_text": "3rd micro-sleep in 2.0 min. Advise driver to pull over safely.",
-  "context": { "vehicle_registration": "EDGE-DEMO-001", "lat": 34.05, "lon": -118.25 },
+  "context": {
+    "vehicle_registration": "MH-12-AB-4321",
+    "driver_id": "DRV-10245",
+    "driver_name": "Ramesh Kulkarni",
+    "route": "Mumbai-Pune Corridor",
+    "shift_label": "Day Shift (06:00-14:00)",
+    "trip_id": "trip_a1b2c3d4e5f6",
+    "trip_started_at": 1234567000.0,
+    "elapsed_trip_seconds": 890.12,
+    "lat": 34.05, "lon": -118.25
+  },
   "vehicle": { "speed_kmh": 72.0, "is_moving": true },
   "alarm": {
     "fired_at": 1234568010.0,
@@ -508,6 +542,16 @@ The backend upserts one `Violation` row (and its linked `Alarm` row) keyed by
 `violation_id`, then broadcasts an `alert_created` (or `alert_updated`, if the
 violation already existed and just grew — e.g. a 4th drowsiness event) message to
 every dashboard connected over `/ws/alerts`.
+
+`context.driver_id`/`driver_name` resolve the `Violation`'s linked `Driver` row (so the alert
+detail panel's Trip Details card shows a real name instead of "Unknown driver"); `route`/
+`shift_label`/`trip_id`/`trip_started_at`/`elapsed_trip_seconds` are carried straight through.
+`speed_at_event_kmh` in the Trip Details card comes from the matching `Event` row (looked up via
+`trigger_event_ids`) rather than from this payload directly — so a violation whose trigger events
+were never separately `POST`ed to `/api/events` will show "—" for that one field even though
+driver/route/shift/trip-started all resolve correctly. `dms-edge`'s Cloud Hub Agent always sends
+both `/api/events` and `/api/violations` for a real drowsiness/distraction/phone-usage detection,
+so this only matters if you're hand-crafting a `/api/violations` call for testing.
 
 ---
 

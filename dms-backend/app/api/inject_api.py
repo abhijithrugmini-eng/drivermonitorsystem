@@ -159,6 +159,7 @@ async def receive_violation(payload: schemas.ViolationIn, db: Session = Depends(
     ACTIVE violation of the same type, not a duplicate) and broadcasts exactly
     like the fallback path does today."""
     vehicle = _get_or_create_vehicle(db, payload.context, payload.vehicle)
+    driver = _get_or_create_driver(db, payload.context)
     vehicle.last_seen_at = utcnow()
 
     existing = (
@@ -176,6 +177,7 @@ async def receive_violation(payload: schemas.ViolationIn, db: Session = Depends(
         rule_name=rule_name,
     )
     violation.vehicle_id = vehicle.id
+    violation.driver_id = driver.id if driver else None
     violation.severity = payload.severity
     violation.status = payload.status
     violation.trigger_event_ids_json = payload.trigger_event_ids
@@ -183,6 +185,24 @@ async def receive_violation(payload: schemas.ViolationIn, db: Session = Depends(
     violation.first_event_timestamp = payload.first_event_timestamp
     violation.last_event_timestamp = payload.last_event_timestamp
     violation.recommended_action_text = payload.recommended_action_text
+
+    # Resolve the Event row that best represents this violation (for evidence/
+    # speed_at_event/trip fields in the alert detail panel) — prefer one with
+    # evidence already attached, else the most recent by timestamp. Events for
+    # edge-sourced violations only exist if the edge separately POSTed them to
+    # /api/events (see CloudHubAgent.FORWARDED_EVENT_TYPES); if none match, leave
+    # primary_evidence_event_id unset rather than erroring.
+    if payload.trigger_event_ids:
+        candidates = (
+            db.query(models.Event)
+            .filter(models.Event.event_id.in_(payload.trigger_event_ids))
+            .all()
+        )
+        if candidates:
+            with_evidence = [e for e in candidates if e.evidence is not None]
+            primary_event = max(with_evidence or candidates, key=lambda e: e.timestamp)
+            violation.primary_evidence_event_id = primary_event.event_id
+
     db.add(violation)
     db.flush()
 

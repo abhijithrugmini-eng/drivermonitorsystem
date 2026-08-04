@@ -7,6 +7,9 @@ See .claude/skills/dms-edge-dev/SKILL.md "Cloud Hub Agent" / "Data flow contract
 """
 from __future__ import annotations
 
+import time
+import uuid
+
 import cv2
 import numpy as np
 import requests
@@ -50,6 +53,10 @@ class CloudHubAgent:
     def __init__(self, telematics_agent: TelematicsAgent, vehicle_config: VehicleConfig | None = None) -> None:
         self._telematics_agent = telematics_agent
         self._vehicle_config = vehicle_config
+        # One trip per edge process run — no ignition-cycle/trip-boundary detection
+        # in this POC, see dms-spec/changes/display-trip-details-in-ui/design.md.
+        self._trip_id = f"trip_{uuid.uuid4().hex[:12]}"
+        self._trip_started_at = time.time()
 
     def _vehicle_registration(self) -> str:
         return self._vehicle_config.vehicle_registration if self._vehicle_config else EDGE_VEHICLE_REGISTRATION
@@ -66,6 +73,18 @@ class CloudHubAgent:
             "vehicle_meta": (vc.extra or None) if vc else None,
         }
 
+    def _trip_context(self) -> dict:
+        """route/shift sourced from --vehicle-config when given; trip_id/trip_started_at/
+        elapsed_trip_seconds are generated once per process run (this agent's lifetime)."""
+        vc = self._vehicle_config
+        return {
+            "route": vc.route_name if vc else None,
+            "shift_label": vc.shift_label if vc else None,
+            "trip_id": self._trip_id,
+            "trip_started_at": self._trip_started_at,
+            "elapsed_trip_seconds": time.time() - self._trip_started_at,
+        }
+
     def _map_event(self, event: DMSEvent, vehicle_state: VehicleState) -> dict:
         return {
             "event_id": event.id,
@@ -79,6 +98,7 @@ class CloudHubAgent:
             "context": {
                 "vehicle_registration": self._vehicle_registration(),
                 **self._identity_context(),
+                **self._trip_context(),
                 "frame_index": event.frame_index,
                 "camera_id": CAMERA_ID,
                 "lat": vehicle_state.lat,
@@ -131,6 +151,7 @@ class CloudHubAgent:
             "context": {
                 "vehicle_registration": self._vehicle_registration(),
                 **self._identity_context(),
+                **self._trip_context(),
                 "lat": vehicle_state.lat,
                 "lon": vehicle_state.lon,
             },

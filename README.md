@@ -35,10 +35,10 @@ only real difference is venv activation syntax and which Python launcher you use
 <summary><b>Windows (PowerShell)</b></summary>
 
 ```powershell
-   cd dms-backend
-   py -3.11 -m venv .venv
-   .\.venv\Scripts\pip.exe install -r requirements.txt
-   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd dms-backend
+py -3.11 -m venv .venv
+.\.venv\Scripts\pip.exe install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 No `uv` needed on Windows — plain `venv`/`pip` works fine here. If `py -3.11` isn't found, install
@@ -127,6 +127,33 @@ python main.py --video videos/dataset.mp4 --no-display --vehicle-config fleet/ex
 ```
 </details>
 
+### `--vehicle-config` example
+
+`../demo/vehicle/example-vehicle-config.json`
+
+```json
+{
+  "vehicle_registration": "MH-12-AB-4321",
+  "vin": "1HGCM82633A004352",
+  "fleet_id": "FLEET-WEST-07",
+  "driver_name": "Ramesh Kulkarni",
+  "driver_id": "DRV-10245",
+  "route_name": "Mumbai-Pune Corridor",
+  "shift_label": "Day Shift (06:00-14:00)",
+  "depot": "Pune Hub 3",
+  "insurance_expiry": "2027-01-15",
+  "notes": "Demo truck for AI COE showcase",
+  "route": {
+    "from_lat": 18.5204,
+    "from_lon": 73.8567,
+    "to_lat": 18.5384,
+    "to_lon": 73.8757,
+    "avg_speed_kmh": 60,
+    "duration_secs": 180
+  }
+}
+```
+
 You provide your own input video (none ships in this repo). By default this also starts an
 in-process **Telematics Simulator** that generates plausible GPS/speed/RPM automatically — no
 separate process needed. To tag the run with a specific truck/driver identity (and optionally a
@@ -142,9 +169,9 @@ telemetry-ingest endpoint, and troubleshooting: `dms-edge/README.md`.
 In a second terminal (same commands on all three OSes):
 
 ```bash
-   cd dms-ui
-   npm install
-   npm run dev
+cd dms-ui
+npm install
+npm run dev
 ```
 
 - Dashboard: http://localhost:5173

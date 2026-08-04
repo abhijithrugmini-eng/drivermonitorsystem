@@ -131,6 +131,8 @@ keeps going (log-and-drop, no retry queue).
   "fleet_id": "FLEET-WEST-07",
   "driver_name": "Ramesh Kulkarni",
   "driver_id": "DRV-10245",
+  "route_name": "Mumbai-Pune Corridor",
+  "shift_label": "Day Shift (06:00-14:00)",
   "depot": "Pune Hub 3",
   "insurance_expiry": "2027-01-15",
   "notes": "Demo truck for AI COE showcase",
@@ -143,6 +145,7 @@ keeps going (log-and-drop, no retry queue).
     "duration_secs": 180
   }
 }
+
 ```
 
 The 5 top-level fields (`vehicle_registration`, `vin`, `fleet_id`, `driver_name`, `driver_id`) are

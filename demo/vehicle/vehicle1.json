@@ -1,0 +1,18 @@
+{
+  "vehicle_registration": "MH-12-AB-4321",
+  "vin": "1HGCM82633A004352",
+  "fleet_id": "FLEET-WEST-07",
+  "driver_name": "Ramesh Kulkarni",
+  "driver_id": "DRV-10245",
+  "depot": "Pune Hub 3",
+  "insurance_expiry": "2027-01-15",
+  "notes": "Demo truck for AI COE showcase",
+  "route": {
+    "from_lat": 18.5204,
+    "from_lon": 73.8567,
+    "to_lat": 18.5384,
+    "to_lon": 73.8757,
+    "avg_speed_kmh": 60,
+    "duration_secs": 180
+  }
+}
